@@ -93,6 +93,14 @@ class FBXTextureExtractor:
         else:
             print("\n未找到任何贴图文件")
         
+        # 删除场景中的所有贴图
+        print("\n正在删除FBX模型中的所有贴图...")
+        self._remove_all_textures(scene)
+        
+        # 导出新的FBX文件
+        print("\n正在导出无贴图的FBX模型...")
+        self._export_fbx(scene, manager)
+        
         # 清理
         manager.Destroy()
         
@@ -184,6 +192,100 @@ class FBXTextureExtractor:
                 except (NameError, AttributeError):
                     # 如果FbxCriteria不可用，跳过
                     pass
+    
+    def _remove_all_textures(self, scene):
+        """删除场景中的所有贴图引用"""
+        removed_count = 0
+        
+        # 删除场景中的所有纹理对象
+        texture_count = scene.GetTextureCount()
+        textures_to_remove = []
+        
+        for i in range(texture_count):
+            texture = scene.GetTexture(i)
+            if texture:
+                textures_to_remove.append(texture)
+        
+        for texture in textures_to_remove:
+            try:
+                texture.Destroy()
+                removed_count += 1
+            except Exception as e:
+                print(f"  警告: 删除纹理时出错: {e}")
+        
+        # 清理材质中的纹理属性
+        root_node = scene.GetRootNode()
+        if root_node:
+            self._clear_material_textures(root_node)
+        
+        print(f"  已删除 {removed_count} 个纹理对象")
+    
+    def _clear_material_textures(self, node):
+        """递归清理节点材质中的纹理属性"""
+        # 清理当前节点的材质
+        material_count = node.GetMaterialCount()
+        for i in range(material_count):
+            material = node.GetMaterial(i)
+            if material:
+                # 尝试断开所有纹理属性的连接
+                try:
+                    texture_properties = [
+                        FbxSurfaceMaterial.sDiffuse,  # type: ignore
+                        FbxSurfaceMaterial.sAmbient,  # type: ignore
+                        FbxSurfaceMaterial.sSpecular,  # type: ignore
+                        FbxSurfaceMaterial.sEmissive,  # type: ignore
+                        FbxSurfaceMaterial.sBump,  # type: ignore
+                        FbxSurfaceMaterial.sNormalMap,  # type: ignore
+                        FbxSurfaceMaterial.sTransparentColor,  # type: ignore
+                        FbxSurfaceMaterial.sReflection,  # type: ignore
+                    ]
+                    
+                    for prop_name in texture_properties:
+                        prop = material.FindProperty(prop_name)
+                        if prop.IsValid():
+                            # 断开所有纹理连接
+                            try:
+                                texture_count = prop.GetSrcObjectCount(FbxCriteria.ObjectType(FbxTexture.ClassId))  # type: ignore
+                                for j in range(texture_count - 1, -1, -1):
+                                    texture = prop.GetSrcObject(FbxCriteria.ObjectType(FbxTexture.ClassId), j)  # type: ignore
+                                    if texture:
+                                        prop.DisconnectSrcObject(texture)
+                            except (NameError, AttributeError):
+                                pass
+                except (NameError, AttributeError):
+                    pass
+        
+        # 递归处理子节点
+        for i in range(node.GetChildCount()):
+            self._clear_material_textures(node.GetChild(i))
+    
+    def _export_fbx(self, scene, manager):
+        """导出FBX文件到输出目录"""
+        # 生成输出文件名
+        original_filename = os.path.basename(self.fbx_file_path)
+        name_without_ext = os.path.splitext(original_filename)[0]
+        output_fbx_path = os.path.join(self.output_dir, f"{name_without_ext}_no_textures.fbx")
+        
+        # 创建导出器
+        exporter = FbxExporter.Create(manager, "")  # type: ignore
+        
+        # 初始化导出器
+        if not exporter.Initialize(output_fbx_path, -1, manager.GetIOSettings()):
+            print(f"  ✗ 导出失败: {exporter.GetStatus().GetErrorString()}")
+            exporter.Destroy()
+            return False
+        
+        # 导出场景
+        result = exporter.Export(scene)
+        exporter.Destroy()
+        
+        if result:
+            print(f"  ✓ 已导出新模型: {os.path.basename(output_fbx_path)}")
+            print(f"  位置: {os.path.abspath(output_fbx_path)}")
+        else:
+            print(f"  ✗ 导出失败")
+        
+        return result
     
     def _copy_textures(self):
         """复制贴图文件到输出目录"""
