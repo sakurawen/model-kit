@@ -9,6 +9,7 @@ FBX模型贴图提取工具 - 自动从FBX文件中提取所有贴图到指定�
 - 📁 使用时间戳创建唯一的输出目录
 - 🗑️ 自动删除FBX模型中的所有贴图引用
 - 📦 导出无贴图的新FBX模型到输出目录
+- 🗜️ 自动生成包含模型与贴图的zip压缩包
 - 📋 详细的提取过程日志
 - 💾 自动处理相对路径和绝对路径
 - ✅ 不修改原始FBX文件，保证源文件安全
@@ -47,15 +48,17 @@ python main.py path/to/your/model.fbx custom_output
 
 ```
 output/
-└── 20251205_091645/              # 时间戳文件夹
-    ├── example_no_textures.fbx   # 无贴图的新FBX模型
-    └── texture_pbr_20250901.png  # 提取的主贴图
+├── 20251205_191103/              # 时间戳文件夹
+│   ├── example_no_textures.fbx   # 无贴图的新FBX模型
+│   └── texture_pbr_20250901.png  # 提取的主贴图
+└── 20251205_191103.zip           # 同名zip压缩包
 ```
 
 注意：
 - 只提取主贴图（不含 _metallic、_normal、_roughness 等后缀）
 - 导出的新FBX文件已移除所有贴图引用
 - 原始FBX文件保持不变
+- 同目录下会生成同名zip压缩包，便于直接分发
 
 ## 示例输出
 

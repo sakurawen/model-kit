@@ -101,6 +101,10 @@ class FBXTextureExtractor:
         print("\n正在导出无贴图的FBX模型...")
         self._export_fbx(scene, manager)
         
+        # 打包输出目录
+        print("\n正在打包提取结果...")
+        self._zip_output_dir()
+        
         # 清理
         manager.Destroy()
         
@@ -286,6 +290,15 @@ class FBXTextureExtractor:
             print(f"  ✗ 导出失败")
         
         return result
+    
+    def _zip_output_dir(self):
+        """将输出目录打包为zip"""
+        archive_base = os.path.abspath(self.output_dir)
+        try:
+            zip_path = shutil.make_archive(archive_base, "zip", self.output_dir)
+            print(f"  ✓ 已生成压缩包: {zip_path}")
+        except Exception as exc:
+            print(f"  ✗ 压缩失败: {exc}")
     
     def _copy_textures(self):
         """复制贴图文件到输出目录"""
